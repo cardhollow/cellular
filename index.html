@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#080808" />
+  <title>Cellular Programming Language</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="view" id="editorView">
+    <header class="bar">
+      <div class="bar-main">
+        <button id="fileMenuBtn" aria-haspopup="menu" aria-expanded="false">File ▾</button>
+        <button id="editorMenuBtn" aria-haspopup="menu" aria-expanded="false">Editor ▾</button>
+        <span class="g">cellular@terminal:~$</span>
+        <span class="file-caption">edit <span id="activeFileLabel">program.cpl</span></span>
+      </div>
+      <div class="bar-actions">
+        <button class="primary" id="run">Run</button>
+        <button id="docsBtn" aria-haspopup="true" aria-expanded="false">Documentation</button>
+        <span class="bar-spacer"></span>
+        <button id="foldall">Fold all</button>
+        <button id="unfoldall">Unfold all</button>
+      </div>
+    </header>
+
+    <div id="searchbar" hidden>
+      <div class="searchrow">
+        <label for="findq">Find</label><input id="findq" autocomplete="off" spellcheck="false" placeholder="Search code" />
+        <label title="Match letter case"><input id="findCase" type="checkbox" /> Aa</label>
+        <label title="Treat search as a regular expression. Enter the pattern without / delimiters; ^ and $ match each source line."><input id="findRegex" type="checkbox" /> .* </label>
+        <button id="findPrev" title="Previous match">↑</button><button id="findNext" title="Next match">↓</button>
+      </div>
+      <div class="searchrow" id="replaceRow" hidden>
+        <label for="replaceq">Replace</label><input id="replaceq" autocomplete="off" spellcheck="false" placeholder="Replace with" />
+        <button id="replaceOne">Replace</button><button id="replaceAll">Replace all</button>
+      </div>
+      <button id="closeSearch" title="Close search">×</button><span id="findStatus" class="dim"></span>
+    </div>
+
+    <div id="gotoBar" hidden>
+      <label for="gotoLine">Go to line</label><input id="gotoLine" inputmode="numeric" autocomplete="off" spellcheck="false" />
+      <button id="gotoGo" type="button">Go</button><button id="gotoClose" type="button">Cancel</button>
+      <span class="dim" id="gotoStatus"></span>
+    </div>
+
+    <section id="ed" aria-label="Cellular program source editor">
+      <div id="lines">
+        <div id="rows"></div><div id="curline"></div><div id="selbox"></div><div id="pairbox"></div>
+        <div id="multi"></div><div id="cur"></div>
+        <textarea id="ta" wrap="off" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Cellular program source"></textarea>
+        <div id="pop"></div><div id="sig"></div>
+      </div>
+    </section>
+
+    <footer id="help" class="dim">
+      <span id="pos"></span>
+    </footer>
+
+    <nav class="mobile-tools" aria-label="Insert language syntax">
+      <span class="tool-label">Insert</span>
+      <button id="contextMenuBtn" type="button" title="Selection actions" aria-label="Selection actions">⋮</button>
+      <button data-insert="@grid 5 5\n">@grid</button>
+      <button data-insert="set(0,0,1)">set()</button>
+      <button data-insert="if(0,0,1)">if()</button>
+      <button data-insert="fill(0,0,3,3,1)">fill()</button>
+      <button data-insert="copy(0,0,2,2,5,5)">copy()</button>
+      <button data-insert="mv(0,0,1,0)">mv()</button>
+      <button data-insert="jmp(1)">jmp()</button>
+      <button data-insert="jmpc(1)">jmpc()</button>
+      <button data-insert="call(1)">call()</button>
+      <button data-insert="slp(1000)">slp()</button>
+      <button data-insert="~">~</button>
+      <button data-insert="[\n+;\n]">[ group ]</button>
+      <button data-insert=":">:</button>
+      <button data-insert="?:">?:</button>
+      <button data-insert="&gt;:">&gt;:</button>
+      <button data-insert="&lt;:">&lt;:</button>
+      <button data-insert="&amp;!">&amp;!</button>
+      <button data-insert="#&lt;block&gt;#\n\n#&lt;/block&gt;#">Fold block</button>
+      <button data-insert="+">+</button>
+      <button data-insert="-">-</button>
+      <button data-insert="%">%</button>
+      <button data-insert=";">;</button>
+      <button data-insert="#  #"># comment #</button>
+      <button data-insert=",">,</button>
+      <button data-insert="0">0</button>
+      <button data-insert="1">1</button>
+    </nav>
+  </main>
+
+  <section class="popup" id="fileMenu" role="menu" aria-label="File menu" hidden>
+    <div class="popup-head"><strong>File</strong><button id="fileClose" type="button">Close</button></div>
+    <div class="popup-note" id="fileCurrentLabel">program.cpl</div>
+    <label class="popup-line" for="fileNameInput">Name <input id="fileNameInput" maxlength="180" value="program.cpl" spellcheck="false" /></label>
+    <button class="popup-action" id="fileRename" type="button">Rename current file</button>
+    <hr class="popup-sep" />
+    <button class="popup-action" id="fileNew" type="button">New file…</button>
+    <button class="popup-action" id="fileImportBtn" type="button">Import file…</button>
+    <button class="popup-action" id="openLocalFilesBtn" type="button">Open local CPL…</button>
+    <button class="popup-action" id="fileExport" type="button">Export / download</button>
+    <button class="popup-action" id="fileSave" type="button">Save in browser</button>
+    <button class="popup-action" id="fileCopy" type="button">Copy source</button>
+    <hr class="popup-sep" />
+    <button class="popup-action" id="fileStarter" type="button">Restore starter sample…</button>
+    <div class="popup-note" id="fileState" aria-live="polite">Ready</div>
+    <input id="fileImportInput" type="file" accept=".cpl,.grid,.gpl,.txt" hidden />
+  </section>
+
+  <section class="modal-backdrop" id="localFilesModal" hidden>
+    <div class="local-files-dialog" role="dialog" aria-modal="true" aria-labelledby="localFilesTitle">
+      <div class="popup-head">
+        <strong id="localFilesTitle">Open local CPL</strong>
+        <button id="localFilesClose" type="button" aria-label="Close local files">×</button>
+      </div>
+      <div class="local-files-description">Programs saved in this browser</div>
+      <div id="localFileList" class="saved-file-list local-file-list" aria-live="polite">
+        <span class="popup-note">Loading files…</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="popup editor-context" id="contextMenu" role="menu" aria-label="Editor context menu" hidden>
+    <button class="popup-action" type="button" data-context="cut">Cut</button>
+    <button class="popup-action" type="button" data-context="copy">Copy</button>
+    <button class="popup-action" type="button" data-context="paste">Paste</button>
+    <hr class="popup-sep" />
+    <button class="popup-action" type="button" data-context="find">Find</button>
+    <button class="popup-action" type="button" data-context="replace">Replace</button>
+    <button class="popup-action" type="button" data-context="goto">Go to</button>
+    <hr class="popup-sep" />
+    <button class="popup-action" type="button" data-context="comment">Comment</button>
+    <div class="popup-note" id="contextNotice" aria-live="polite"></div>
+  </section>
+  <section class="diagnostic-popup" id="diagnosticPopup" role="alert" hidden>
+    <div id="diagnosticMessage"></div>
+    <button id="diagnosticClose" type="button" aria-label="Close diagnostic">×</button>
+  </section>
+
+  <section class="popup editor-menu" id="editorMenu" role="menu" aria-label="Editor menu" hidden>
+    <div class="popup-head"><strong>Editor</strong><button id="editorMenuClose" type="button">Close</button></div>
+    <button class="popup-action" id="editorFind" type="button">Find <span class="menu-shortcut">Ctrl+F</span></button>
+    <button class="popup-action" id="editorReplace" type="button">Replace <span class="menu-shortcut">Ctrl+R</span></button>
+    <button class="popup-action" id="editorGoto" type="button">Go to <span class="menu-shortcut">Ctrl+G</span></button>
+    <button class="popup-action" id="editorSelectAll" type="button">Select All <span class="menu-shortcut">Ctrl+A</span></button>
+    <hr class="popup-sep" />
+    <label class="popup-toggle" for="editorWordWrap"><input id="editorWordWrap" type="checkbox" /> Word Wrap</label>
+    <label class="popup-toggle" for="editorReadOnly"><input id="editorReadOnly" type="checkbox" /> Read Only</label>
+  </section>
+
+  <section class="popup docs-popup" id="docsPanel" role="region" aria-label="Documentation" hidden>
+    <div class="popup-head"><strong>Documentation</strong><button id="docsClose" type="button">Close</button></div>
+
+    <div id="docsContent" class="docs-content" aria-live="polite"></div>
+  </section>
+
+  <main class="view run-view" id="runView" hidden>
+    <header class="bar run-bar">
+      <button id="backToEditor">Editor</button>
+      <button class="primary" id="restart">Restart</button>
+      <button id="pauseResume">Pause</button>
+      <button id="stepOnce">Step</button>
+      <button id="stop">Stop</button>
+      <button id="toggleLogs" type="button" aria-controls="tracePanel" aria-expanded="true">Hide logs</button>
+      <button id="clearTrace">Clear log</button>
+      <label class="run-setting">Speed
+        <select id="speed"><option value="rapid" selected>Rapid</option><option value="0">Fast</option><option value="25">Normal</option><option value="100">Slow</option><option value="250">Very slow</option></select>
+      </label>
+      <label class="run-setting run-check" title="Draw visible lines between cells. Unchecked: cells touch with no gap.">
+        <input id="gridBorder" type="checkbox" checked /> Border
+      </label>
+      <span id="runStatus" class="dim">Ready</span>
+    </header>
+    <div class="run-layout" id="runLayout">
+      <section class="panel grid-panel">
+        <div class="panel-head"><strong>Cellular grid</strong><span id="gridDimensions" class="dim">Not initialized</span></div>
+        <div class="grid-stage"><canvas id="gridCanvas" role="img" aria-label="Interactive black and white cellular grid. Tap or click a cell to toggle it."></canvas></div>
+        <div class="grid-foot"><span id="cellInspector">Tap or click a cell to select it and toggle its value.</span><span id="gridStats" class="dim"></span></div>
+      </section>
+      <section class="panel trace-panel" id="tracePanel">
+        <div class="panel-head"><strong>Execution log</strong><span id="executionStats" class="dim">0 steps</span></div>
+        <pre id="trace" aria-live="polite"></pre>
+      </section>
+    </div>
+    <footer class="run-footer"><span id="runMessage">Compile and run to create the grid. Tap or click cells to toggle them.</span><span id="activePosition" class="dim"></span></footer>
+  </main>
+
+  <script>
+    // Define the legacy editor hook before any external scripts load. The
+    // function resolves the editor API when called, so even a caller that
+    // runs before editor.js finishes loading will never get a ReferenceError.
+    window.replaceSel = function (text) {
+      var api = window.CPLEditor || window.Editor;
+      if (!api || typeof api.replaceSelection !== "function") {
+        console.error("replaceSel() called before the CPL editor API is ready.");
+        return false;
+      }
+      return api.replaceSelection(String(text == null ? "" : text));
+    };
+  </script>
+  <script src="js/grid-language.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/starter-sample.js"></script>
+  <script src="Document.js"></script>
+  <script src="js/document-renderer.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
